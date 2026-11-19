@@ -1,9 +1,19 @@
-name: Build Jellyfin plugin
+name: Build and publish Jellyfin plugin
+
 on:
   push:
     branches: [main]
-  pull_request:
+    paths-ignore:
+      - 'manifest.json'
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: subtitle-guardian-publish
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,12 +24,69 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Restore and compile
         run: dotnet build src/Jellyfin.Plugin.SubtitleGuardian.csproj --configuration Release
-      - name: Bundle plugin
+      - name: Bundle plugin ZIP
         run: |
-          mkdir -p release
-          cp src/bin/Release/net10.0/Jellyfin.Plugin.SubtitleGuardian.dll release/
-          cp src/meta.json release/
+          set -euo pipefail
+          mkdir -p release/bundle
+          cp src/bin/Release/net10.0/Jellyfin.Plugin.SubtitleGuardian.dll release/bundle/
+          cp src/meta.json release/bundle/
+          (cd release/bundle && zip -q -9 ../Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip Jellyfin.Plugin.SubtitleGuardian.dll meta.json)
+          unzip -l release/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: dreamstreaming-subtitle-guardian-1.1.0
-          path: release/
+          name: Dreamstreaming-Subtitle-Guardian-1.1.0.0
+          path: release/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip
+      - name: Publish installable GitHub release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ARCHIVE="release/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip"
+          TAG="v1.1.0.0"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ARCHIVE" --clobber
+          else
+            gh release create "$TAG" "$ARCHIVE" --target "$GITHUB_SHA" --title "Dreamstreaming Subtitle Guardian 1.1.0.0" --notes "Jellyfin 12.4 English subtitle audit; manual Run now and daily schedule. Install through the Jellyfin repository manifest or download the ZIP. Development release: test on a backup first."
+          fi
+      - name: Generate Jellyfin repository manifest with ZIP checksum
+        if: github.ref == 'refs/heads/main'
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          archive = Path("release/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip")
+          checksum = hashlib.md5(archive.read_bytes()).hexdigest()
+          manifest = [{
+              "guid": "8ca2e2f8-e82a-4f74-b663-ea18b5fe4aac",
+              "name": "Dreamstreaming Subtitle Guardian",
+              "description": "Checks every movie and episode for English subtitles, downloads missing ones using Jellyfin's installed subtitle providers, and verifies results.",
+              "overview": "Automatic and manual English subtitle audit for Jellyfin 12.4.",
+              "owner": "Dreamstreaming",
+              "category": "Subtitles",
+              "versions": [{
+                  "version": "1.1.0.0",
+                  "changelog": "Full-library manual scan, daily scheduling, rate limit protection, English subtitle verification.",
+                  "targetAbi": "12.4.0.0",
+                  "sourceUrl": "https://github.com/certified-dumbass/title-downloader/releases/download/v1.1.0.0/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip",
+                  "checksum": checksum,
+                  "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+              }]
+          }]
+          Path("manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(f"Manifest created, package MD5: {checksum}")
+          PY
+      - name: Commit manifest
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update Jellyfin plugin manifest for v1.1.0.0 [skip ci]"
+            git push origin HEAD:main
+          fi
