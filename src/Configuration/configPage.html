@@ -1,0 +1,67 @@
+<div data-role="page" class="page type-interior pluginConfigurationPage" id="subtitleGuardianConfigPage">
+  <div data-role="content">
+    <div class="content-primary">
+      <h2>Dreamstreaming Subtitle Guardian</h2>
+      <p>Automatically checks your movies and episodes for English subtitles, searches via enabled Jellyfin subtitle providers and verifies downloads.</p>
+      <form class="subtitleGuardianConfigForm">
+        <div class="checkboxContainer checkboxContainer-withDescription">
+          <label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="sgEnabled" /><span>Enable automatic verification and downloads</span></label>
+          <div class="fieldDescription">Scheduled task runs daily by default; you can also start it manually.</div>
+        </div>
+        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="sgMovies" /><span>Include movies</span></label></div>
+        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="sgEpisodes" /><span>Include series episodes</span></label></div>
+        <div class="checkboxContainer checkboxContainer-withDescription"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="sgEmbedded" /><span>Count existing embedded English subtitles as present</span></label><div class="fieldDescription">Turn off only if you specifically want a separate external English subtitle file even when the video already has embedded subtitles.</div></div>
+        <div class="checkboxContainer"><label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" id="sgPreferNoSdh" /><span>Prefer subtitles without hearing-impaired cues</span></label></div>
+        <div class="inputContainer"><label class="inputLabel inputLabelUnfocused" for="sgSearches">Maximum searches per run</label><input is="emby-input" type="number" id="sgSearches" min="0" max="10000" required /><div class="fieldDescription">A search can consume Wyzie/API credits. Default: 25. Set 0 for unlimited searches (watch provider quotas!).</div></div>
+        <div class="inputContainer"><label class="inputLabel inputLabelUnfocused" for="sgDownloads">Maximum downloads per run</label><input is="emby-input" type="number" id="sgDownloads" min="0" max="10000" required /><div class="fieldDescription">Default: 12. Set 0 for unlimited downloads; test with small limits first.</div></div>
+        <div class="inputContainer"><label class="inputLabel inputLabelUnfocused" for="sgDelay">Delay between checks (seconds)</label><input is="emby-input" type="number" id="sgDelay" min="0" max="120" required /></div>
+        <div class="inputContainer"><label class="inputLabel inputLabelUnfocused" for="sgRetry">Retry failed/missing titles after (hours)</label><input is="emby-input" type="number" id="sgRetry" min="1" max="8760" required /></div>
+        <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Save settings</span></button>
+      </form>
+      <h3>Run and check results</h3>
+      <p><b>Full library audit:</b> Running the task manually checks every movie and episode, even when download limits are reached. Missing titles deferred by the limits are prioritized on the next run.</p><p>Go to <b>Dashboard → Scheduled Tasks → Dreamstreaming: Verify &amp; download English subtitles</b>. The task runs every 24 hours by default. After a scan, read its summary in the Jellyfin server logs or look for <code>last-report.json</code> in the plugin's data folder.</p>
+      <p><b>Required:</b> Install/configure at least one subtitle provider (such as Wyzie Subs or OpenSubtitles), and enable it under the movie/series library subtitle-downloaders settings. This plugin does not bypass provider limits.</p>
+    </div>
+  </div>
+  <script type="text/javascript">
+    (function () {
+      const page = document.querySelector('#subtitleGuardianConfigPage');
+      const pluginId = '8ca2e2f8-e82a-4f74-b663-ea18b5fe4aac';
+      const el = id => page.querySelector('#' + id);
+      const numeric = (id, fallback) => Number.parseInt(el(id).value, 10) || fallback;
+      page.addEventListener('pageshow', async function () {
+        try {
+          const cfg = await ApiClient.getPluginConfiguration(pluginId);
+          el('sgEnabled').checked = cfg.Enabled ?? true;
+          el('sgMovies').checked = cfg.IncludeMovies ?? true;
+          el('sgEpisodes').checked = cfg.IncludeEpisodes ?? true;
+          el('sgEmbedded').checked = cfg.TreatEmbeddedEnglishAsPresent ?? true;
+          el('sgPreferNoSdh').checked = cfg.PreferNonHearingImpaired ?? true;
+          el('sgSearches').value = cfg.MaxSearchesPerRun ?? 25;
+          el('sgDownloads').value = cfg.MaxDownloadsPerRun ?? 12;
+          el('sgDelay').value = cfg.SecondsBetweenSearches ?? 5;
+          el('sgRetry').value = cfg.RetryAfterHours ?? 72;
+        } catch (err) { console.error('Subtitle Guardian settings failed to load', err); Dashboard.alert('Cannot load Subtitle Guardian settings.'); }
+      });
+      page.querySelector('.subtitleGuardianConfigForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        Dashboard.showLoadingMsg();
+        try {
+          const cfg = await ApiClient.getPluginConfiguration(pluginId);
+          cfg.Enabled = el('sgEnabled').checked;
+          cfg.IncludeMovies = el('sgMovies').checked;
+          cfg.IncludeEpisodes = el('sgEpisodes').checked;
+          cfg.TreatEmbeddedEnglishAsPresent = el('sgEmbedded').checked;
+          cfg.PreferNonHearingImpaired = el('sgPreferNoSdh').checked;
+          cfg.MaxSearchesPerRun = numeric('sgSearches', 25);
+          cfg.MaxDownloadsPerRun = numeric('sgDownloads', 12);
+          cfg.SecondsBetweenSearches = numeric('sgDelay', 5);
+          cfg.RetryAfterHours = numeric('sgRetry', 72);
+          await ApiClient.updatePluginConfiguration(pluginId, cfg);
+          Dashboard.alert('Subtitle Guardian settings saved.');
+        } catch (err) { console.error('Subtitle Guardian save failed', err); Dashboard.alert('Cannot save settings. See the browser console.'); }
+        finally { Dashboard.hideLoadingMsg(); }
+      });
+    })();
+  </script>
+</div>
