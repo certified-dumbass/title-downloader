@@ -1,6 +1,21 @@
 # Dreamstreaming Subtitle Guardian 1.1.0.0
 
-**Target:** Jellyfin 12.4, .NET 10, Windows or other Jellyfin OSes. This archive contains the *source code*, not a precompiled DLL. It has not yet been compiled or tested against a live server in the creator's environment.
+**Target:** Jellyfin 12.4, .NET 10, Windows or other Jellyfin OSes. This GitHub repository includes source code; successful GitHub Actions builds publish an installable plugin ZIP and the Jellyfin repository manifest. The plugin is not yet tested on a live Jellyfin server.
+
+## Install through the Jellyfin plugin catalog (recommended)
+
+1. In Jellyfin, open **Dashboard → Plugins → Repositories**.
+2. Add a repository called `Dreamstreaming` with this URL:
+   ```text
+   https://raw.githubusercontent.com/certified-dumbass/title-downloader/main/manifest.json
+   ```
+3. Save and refresh the plugin **Catalog**. Select **Dreamstreaming Subtitle Guardian** and install it.
+4. Restart Jellyfin. Open the plugin's settings to choose a safe quota.
+5. Start the full-library audit manually via **Dashboard → Scheduled Tasks → Dreamstreaming: Verify & download English subtitles → Run now**. The scheduled daily task also runs automatically.
+
+The manifest is published only after a successful build. If the URL returns 404, check [GitHub Actions](https://github.com/certified-dumbass/title-downloader/actions) and [Releases](https://github.com/certified-dumbass/title-downloader/releases) before installing.
+
+**This plugin reads the whole video library on every run**, but downloaded subtitles are limited to avoid burning Wyzie/OpenSubtitles credits. Increase the limits in plugin settings to attempt more downloads per run.
 
 ## What it does
 
