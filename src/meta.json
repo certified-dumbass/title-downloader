@@ -1,0 +1,13 @@
+{
+  "guid": "8ca2e2f8-e82a-4f74-b663-ea18b5fe4aac",
+  "name": "Dreamstreaming Subtitle Guardian",
+  "description": "Automatic English subtitle audit, safe downloads and post-download verification for movies and episodes.",
+  "overview": "Checks missing English subtitles using your installed Jellyfin providers.",
+  "owner": "Dreamstreaming",
+  "category": "Subtitles",
+  "version": "1.1.0.0",
+  "targetAbi": "12.4.0.0",
+  "status": "Active",
+  "autoUpdate": false,
+  "assemblies": ["Jellyfin.Plugin.SubtitleGuardian.dll"]
+}
