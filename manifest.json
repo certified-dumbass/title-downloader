@@ -12,8 +12,8 @@
         "changelog": "Full-library manual scan, daily scheduling, rate limit protection, English subtitle verification.",
         "targetAbi": "12.4.0.0",
         "sourceUrl": "https://github.com/certified-dumbass/title-downloader/releases/download/v1.1.0.0/Dreamstreaming-Subtitle-Guardian_1.1.0.0.zip",
-        "checksum": "3df40aed1aaabed767d565ba8798aca0",
-        "timestamp": "2026-11-19T10:03:20Z"
+        "checksum": "cad60ffae1bf356bfe1e721405177eb2",
+        "timestamp": "2026-11-19T10:04:14Z"
       }
     ]
   }
