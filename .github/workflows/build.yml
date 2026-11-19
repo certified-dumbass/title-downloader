@@ -1,0 +1,25 @@
+name: Build Jellyfin plugin
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and compile
+        run: dotnet build src/Jellyfin.Plugin.SubtitleGuardian.csproj --configuration Release
+      - name: Bundle plugin
+        run: |
+          mkdir -p release
+          cp src/bin/Release/net10.0/Jellyfin.Plugin.SubtitleGuardian.dll release/
+          cp src/meta.json release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dreamstreaming-subtitle-guardian-1.1.0
+          path: release/
